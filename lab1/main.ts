@@ -161,7 +161,20 @@ function unification(): void {
 }
 
 function compact(F: tempMultEq[]): void {
-    let vars2: variable[] = [], v: variable, mult: multEq, mult1: multEq;
+    let vars2: term[] = [], V: term, m: multEq, m1: multEq;
+    vars2 = F[0].vars //variable 
+    V = vars2[0];
+    vars2.slice(0,1);
+    m = V.var!.M;
+    m.count--;
+    vars2.forEach(v => {
+        m1 = v.var!.M;
+        m1.count--;
+        MergeMultEq(m, m1);
+    });
+    MergeMultiTerms(m.terms, F[0].terms);
+    
+    F.slice(0,1);
 }
 
 function MergeMultEq(m: multEq, m1: multEq): void {
@@ -178,7 +191,7 @@ function MergeMultEq(m: multEq, m1: multEq): void {
             //v.terms = m.terms; // или v.M = m; ??
             v.M = m;
             m.vars.forEach(v => {
-                m.vars.splice(m.vars.length, 0, v);
+                m.vars.push(v);
             });
         });
         MergeMultiTerms(m.terms, m1.terms)
@@ -189,7 +202,19 @@ function MergeMultiTerms(m: multiTerm, m1: multiTerm): void {
     let arg: tempMultEq[] = [], arg1: tempMultEq[] = [];
     if (m.args.length == 0) m = m1;
     else if (m1.args.length > 0) {
-
+        if (m.constr ! = m1.constr) {
+            err = 'clash';
+            return;
+        } else {
+            arg = m.args;
+            arg1 = m1.args;
+            for (let i = 0; i<arg.length; i++) {
+                arg1[i].vars.forEach(v => {
+                    arg[i].vars.push(v);
+                });
+                MergeMultiTerms(arg[i].terms, arg1[i].terms);
+            }
+        }
     }
 }
 
