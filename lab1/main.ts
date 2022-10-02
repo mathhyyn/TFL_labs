@@ -17,6 +17,7 @@ class variable {
     name: string;
     count: number;
     terms: term[] = [];
+    M: multEq;
 }
 
 class multEq {
@@ -137,6 +138,7 @@ function unification(): void {
         return;
     };*/
     vars['x0'].terms = [first, second];
+
     buildU();
     let curU = findS();
     if (!curU) {
@@ -148,14 +150,45 @@ function unification(): void {
     let M: multiTerm;
     if (curU.terms.length > 1) {
         M = buildMultiTerm(curU.terms);
+        if (err) return;
         F = [];
         reduce(M, F);
-        if (err) return;
         console.log("\n\n\n M:", M.args[0].vars, M.args[0].terms, M.args[1].vars, M.args[1].terms,
             "\n\n\ F:", F[0].vars, F[0].terms, F[1].vars, F[1].terms);
-        
+        compact(F);
     }
     debug();
+}
+
+function compact(F: tempMultEq[]): void {
+    let vars2: variable[] = [], v: variable, mult: multEq, mult1: multEq;
+}
+
+function MergeMultEq(m: multEq, m1: multEq): void {
+    let vars2: variable[] = [], multt: multEq;
+    if (m != m1) {
+        if (m.vars.length < m1.vars.length) {
+            multt = m;
+            m = m1;
+            m1 = multt;
+        }
+        m.count += m1.count;
+        vars2 = m1.vars;
+        vars2.forEach(v => {
+            v.terms = m.terms; // или v.M = m; ??
+            m.vars.forEach(v => {
+                m.vars.splice(m.vars.length, 0, v);
+            });
+        });
+        MergeMultiTerms(m.terms, m1.terms)
+    }
+}
+
+function MergeMultiTerms(m: term[], m1: term[]): void {
+    let arg: tempMultEq[] = [], arg1: tempMultEq[] = [];
+    if (m.length == 0) m = m1;
+    else if (m1.length > 0) {
+    }
 }
 
 function buildMultiTerm(M: term[]): multiTerm {
@@ -274,8 +307,19 @@ for (let i = 0; i < n; i++) {
 }
 
 function buildU(): void {
+
+    let i = 0;
     Object.values(vars).forEach(v => {
-        if (v.count != 0 || v.name == 'x0') U.push({ vars: [v], terms: v.terms, count: v.count });
+        if (v.count != 0) {
+            U.push({ vars: [v], terms: v.terms, count: v.count }); 
+            v.M = U[i++];
+        }
+        if (v.name == 'x0') {
+            let M = buildMultiTerm(v.terms);
+            U.push({ vars: [v], terms: M, count: v.count });
+            v.M = U[i++];
+        }
+
     });
 }
 
