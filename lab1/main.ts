@@ -22,7 +22,7 @@ class variable {
 
 class multEq {
     vars: variable[] = [];
-    terms: term[] = [];
+    terms: multiTerm;
     count: number = 0;
 }
 
@@ -140,17 +140,17 @@ function unification(): void {
     vars['x0'].terms = [first, second];
 
     buildU();
-    let curU = findS();
+    if (err) return;
+
+    let curU: multEq = findS();
     if (!curU) {
         err = 'unification error: cycle (1)'
         return;
     }
     let F: tempMultEq[] = [];
     let C: term[];
-    let M: multiTerm;
-    if (curU.terms.length > 1) {
-        M = buildMultiTerm(curU.terms);
-        if (err) return;
+    let M: multiTerm = curU.terms;
+    if (M.args.length > 1) {
         F = [];
         reduce(M, F);
         console.log("\n\n\n M:", M.args[0].vars, M.args[0].terms, M.args[1].vars, M.args[1].terms,
@@ -175,7 +175,8 @@ function MergeMultEq(m: multEq, m1: multEq): void {
         m.count += m1.count;
         vars2 = m1.vars;
         vars2.forEach(v => {
-            v.terms = m.terms; // или v.M = m; ??
+            //v.terms = m.terms; // или v.M = m; ??
+            v.M = m;
             m.vars.forEach(v => {
                 m.vars.splice(m.vars.length, 0, v);
             });
@@ -184,10 +185,11 @@ function MergeMultEq(m: multEq, m1: multEq): void {
     }
 }
 
-function MergeMultiTerms(m: term[], m1: term[]): void {
+function MergeMultiTerms(m: multiTerm, m1: multiTerm): void {
     let arg: tempMultEq[] = [], arg1: tempMultEq[] = [];
-    if (m.length == 0) m = m1;
-    else if (m1.length > 0) {
+    if (m.args.length == 0) m = m1;
+    else if (m1.args.length > 0) {
+
     }
 }
 
@@ -311,11 +313,13 @@ function buildU(): void {
     let i = 0;
     Object.values(vars).forEach(v => {
         if (v.count != 0) {
-            U.push({ vars: [v], terms: v.terms, count: v.count }); 
+            U.push({ vars: [v], terms: v.terms, count: v.count });
             v.M = U[i++];
         }
         if (v.name == 'x0') {
             let M = buildMultiTerm(v.terms);
+
+            if (err) return;
             U.push({ vars: [v], terms: M, count: v.count });
             v.M = U[i++];
         }
