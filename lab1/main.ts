@@ -57,7 +57,7 @@ class term {
 
 let fs = require('fs');
 var stdin = process.openStdin();
-let str, err, path = 'tests/test1.txt';
+let str, err, path = 'tests/test2.txt';
 let constructors, vars: Map<string, variable>;
 let U: multEq[] = [];
 let T: multEq[] = [];
@@ -159,7 +159,6 @@ function unification(): void {
         compact(F);
     }
     T.push(curU);
-    console.log(curU);
     debug();
 }
 
@@ -186,6 +185,7 @@ function compact(F: tempMultEq[]): void {
             m1.count--;
             MergeMultEq(m, m1);
         });
+
         MergeMultiTerms(m.terms, f.terms!);
         if (m.count == 0) {
             zeroCount.push(m);
@@ -216,7 +216,7 @@ function MergeMultEq(m: multEq, m1: multEq): void {
 
 function MergeMultiTerms(m: multiTerm, m1: multiTerm): void {
     let arg: tempMultEq[] = [], arg1: tempMultEq[] = [];
-    if (m.args.length == 0) m = m1;
+    if (!m) m = m1;
     else if (m1.args.length > 0) {
         if (m.constr! = m1.constr) {
             err = 'clash';
@@ -228,6 +228,7 @@ function MergeMultiTerms(m: multiTerm, m1: multiTerm): void {
                 arg1[i].vars.forEach(v => {
                     arg[i].vars.push(v);
                 });
+
                 MergeMultiTerms(arg[i].terms!, arg1[i].terms!);
             }
         }
@@ -236,28 +237,32 @@ function MergeMultiTerms(m: multiTerm, m1: multiTerm): void {
 
 function buildMultiTerm(M: term[]): multiTerm {
     let vars2: term[] = [], terms2: term[] = [];
+    console.log(M);
     if (M[0].isVar) log('Аня где то облажалась');
-    let n = M[0].subterms.length;
     let constr = M[0].constr;
     let list: tempMultEq[] = [];
-    for (let i = 0; i < n; i++) {
-        let F2: term[] = [];
-        let C2: term[] = [];
-        M.forEach(elem => {
-            if (elem.isVar) log('Аня где то облажалась');
-            else {
-                if (elem.constr != constr) {
-                    err = 'unification error: невозможно построить мультитерм конструкторы имеют разные имена';
-                    return;
+    if (constr.fieldsNum != 0) {
+        let n = M[0].subterms.length;
+        for (let i = 0; i < n; i++) {
+            let F2: term[] = [];
+            let C2: term[] = [];
+            M.forEach(elem => {
+                if (elem.isVar) log('Аня где то облажалась');
+                else {
+                    if (elem.constr != constr) {
+                        err = 'unification error: невозможно построить мультитерм конструкторы имеют разные имена';
+                        return;
+                    }
+                    let subterm = elem.subterms[i];
+                    if (subterm.isVar) vars2.push(elem.subterms[i]);
+                    else terms2.push(elem.subterms[i]);
                 }
-                let subterm = elem.subterms[i];
-                if (subterm.isVar) vars2.push(elem.subterms[i]);
-                else terms2.push(elem.subterms[i]);
-            }
-        }); //еле врубилась что такое мультитерм
-        let MT = buildMultiTerm(terms2);
-        list.push({ vars: vars2, terms: MT });
-        vars2 = []; terms2 = [];
+            }); //еле врубилась что такое мультитерм
+
+            let MT = buildMultiTerm(terms2);
+            list.push({ vars: vars2, terms: MT });
+            vars2 = []; terms2 = [];
+        }
     }
     let M2: multiTerm = { args: list, constr: constr };
     return M2;
