@@ -1,32 +1,49 @@
-function log(str: string): void {
+function log(str: any): void {
     console.log(str);
 }
 function error(err: string): void {
     console.error("\x1b[31m%s\x1b[0m", err);
 }
+function debug(): void {
+    if (debugFlag) console.log(U);
+}
 
-interface constructors {
+class constructor {
     name: string;
     fieldsNum: number;
 }
 
-interface vars {
+class variable {
     name: string;
-    count?: number;
+    count: number;
+    terms: term[];
 }
 
-interface term {
-    isVar?: boolean;
-    var?: vars;
-    constr?: constructors;
-    subterms?: term[];
+class multiEquation {
+    vars: variable[];
+    terms: term[] = [];
+    count: number = 0;
+}
+
+class term {
+    isVar: boolean;
+    var: variable;
+    constr: constructor;
+    subterms: term[];
+    /*findVarInTerm(v: string): boolean {
+        this.subterms?.forEach(elem => {
+            if (elem.isVar)
+                if (elem.var?.name == v) return true;
+        });
+        return false;
+    }*/
 }
 
 let fs = require('fs');
 var stdin = process.openStdin();
 let str, err, path = 'tests/test1.txt';
-let constructors = new Map<(string), constructors>([]);
-let vars = new Map<(string), vars>([]);
+let constructors, vars: Map<string, variable>, U: multiEquation[] = [];
+let debugFlag = true;
 let pos = 0; //позиция чтения символа в терме
 
 unification();
@@ -39,12 +56,21 @@ stdin.on("data", function (input) {
         console.log("Нажмите Enter");
         return;
     }
-    path = 'tests/' + input + '.txt';
-    unification();
-    if (err) error(err);
+    if (input == 'debug') {
+        debugFlag = !debugFlag;
+    } else {
+        path = 'tests/' + input + '.txt';
+        unification();
+        if (err) error(err);
+    }
 });
 
 function unification(): void {
+    err = '';
+    constructors = new Map<(string), constructor>([]);
+    vars = new Map<(string), variable>([]);
+    U = [];
+    vars['x0'] = { name: "x0", count: 0 };
     try { str = fs.readFileSync(path, 'utf8'); }
     catch (e) {
         err = e;
@@ -65,12 +91,15 @@ function unification(): void {
         err = 'syntax error';
         return;
     }
+
     let substr = str.match(/constructors=(.+)variables/);
     parseConstructors(substr[1]);
     if (err) return;
+
     substr = str.match(/variables=(.+)Firstterm/);
     parseVariables(substr[1]);
     if (err) return;
+
     substr = str.match(/Firstterm:(.+)Secondterm/);
     pos = 0;
     let first = parseTerm(substr[1]);
@@ -78,7 +107,7 @@ function unification(): void {
     console.log(first);
 
     substr = str.match(/Secondterm:(.+)/);
-    pos = 0
+    pos = 0;
     let second = parseTerm(substr[1]);
     if (err) return;
     console.log(second);
@@ -87,6 +116,29 @@ function unification(): void {
         err = 'error: имена 1го и 2го терма не совпадают';
         return;
     };
+    vars['x0'].terms = [first, second];
+    buildU();
+    let curU = findS();
+    if (!curU) {
+        err = 'error: unification is not possible (1)'
+        return;
+    }
+    debug();
+}
+
+function buildU(): void {
+    Object.values(vars).forEach(v => {
+        if (v.count != 0 || v.name == 'x0') U.push({ vars: [v], terms: v.terms, count: v.count });
+    });
+}
+
+function findS(): any {
+    let curU;
+    U.forEach(u => {
+        console.log(u, u.terms.length > 1, u.count == 0);
+        if (u.count == 0 && u.terms.length > 1) { curU = u; return; }
+    });
+    return curU;
 }
 
 function parseConstructors(str: string): void {
@@ -102,13 +154,13 @@ function parseConstructors(str: string): void {
     let constructorsStr = str.split(',');
     constructorsStr.forEach(elem => {
         let res = elem.match(/([A-Za-z])\((\d+)\)/);
-        if (constructors[res[1]]) {
-            if (constructors[res[1]].fieldsNum.toString() != res[2]) {
+        if (constructors[res![1]]) {
+            if (constructors[res![1]].fieldsNum.toString() != res![2]) {
                 err = 'constructors error: конструкторы с одним именем, но разным количеством переменных';
                 return;
             }
         } else
-            constructors[res[1]] = { name: res[1], fieldsNum: Number(res[2]) };
+            constructors[res![1]] = { name: res![1], fieldsNum: Number(res![2]) };
     });
     if (err) return;
     console.log(constructors);
@@ -130,12 +182,12 @@ function parseVariables(str: string): void {
             err = 'variables syntax error: пространство имен конструкторов и переменных пересекаются';
             return;
         }
-        vars[elem] = { name: elem };
+        vars[elem] = { name: elem, count: 0, terms: [] };
     });
     console.log(vars);
 }
 
-function parseTerm(str: string): term {
+function parseTerm(str: string): any {
     console.log(str);
     let term = parseTermStr(str);
     if (str.length != pos) {
@@ -145,15 +197,16 @@ function parseTerm(str: string): term {
     return term;
 }
 
-function parseTermStr(str: string): term {
+function parseTermStr(str: string): any {
     if (!str) {
         err = 'term syntax error';
         return {};
     }
     let t = str[pos++];
-    console.log(t);
-    if (vars[t])
+    if (vars[t]) {
+        vars[t].count++;
         return { isVar: true, var: vars[t] };
+    }
     else if (constructors[t]) {
         let constr = constructors[t];
         let n = constr.fieldsNum;
