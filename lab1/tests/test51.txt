@@ -1,0 +1,4 @@
+constructors    =F(3), R(1)
+variables       =q, x, y, a, w, v
+First term:     F(q, q, q)
+Second term:    F(F(x, y, R(v)), F(a, w, a), F(w, x, y))

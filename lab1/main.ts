@@ -5,9 +5,12 @@ function error(err: string): void {
     console.error("\x1b[31m%s\x1b[0m", err);
 }
 function debug(): void {
-    if (debugFlag) {
-        console.log("\n-------U------\n", U);
-        console.log("\n-------T------\n", T);
+    if (debugFlag && T.length != 0) {
+        log('- - U - - ');
+        output(U);
+
+        log('- - T - - ');
+        output(T);
     }
 }
 
@@ -60,7 +63,8 @@ let debugFlag = true;
 let pos = 0; //позиция чтения символа в терме
 
 unification();
-output();
+log('\n______result_______\n');
+output(T);
 
 stdin.on("data", function (input) {
     input = input.toString().trim();
@@ -74,7 +78,10 @@ stdin.on("data", function (input) {
     } else {
         path = 'tests/' + input + '.txt';
         unification();
-        output();
+
+        log('\n______result_______\n');
+        output(U);
+        output(T);
     }
 });
 
@@ -93,7 +100,6 @@ function unification(): void {
         err = e;
         return;
     }
-    log(str);
 
     if (!str.match('First term:') || !str.match('Second term:')) {
         err = 'syntax error';
@@ -122,13 +128,11 @@ function unification(): void {
     pos = 0;
     let first = parseTerm(substr[1]);
     if (err) return;
-    console.log(first);
 
     substr = str.match(/Secondterm:(.+)/);
     pos = 0;
     let second = parseTerm(substr[1]);
     if (err) return;
-    console.log(second);
 
     /*if (first.constr.name != second.constr.name) {
         err = 'error: имена 1го и 2го терма не совпадают';
@@ -141,10 +145,10 @@ function unification(): void {
 
     buildZeroCount();
     while (multEqNum > 0) {
-        log("a");
+        debug();
         let curU = selectMultEq();
 
-        console.log("1", curU);
+        //console.log("1", curU);
         if (err) return;
 
         let F: tempMultEq[] = [];
@@ -155,18 +159,18 @@ function unification(): void {
             reduce(M, F);
             //console.log("\n\n\n M:", M.args[0].vars, M.args[0].terms, M.args[1].vars, M.args[1].terms,"\n\n\ F:", F[0].vars, F[0].terms, F[1].vars, F[1].terms);
 
-            console.log("multEqNum:  ", multEqNum);
+            //console.log("multEqNum:  ", multEqNum);
+            console.log("ГРАНИЦА:  ", F);
             compact(F);
 
-            console.log(multEqNum);
+            //console.log(multEqNum);
         }
         T.push(curU);
-        console.log(multEqNum);
-        console.log("-----C:   ", curU);
+        //console.log(multEqNum);
+        //console.log("-----C:   ", curU);
         /*console.log("-----CtermsV:   ", curU.terms.args[0].vars);
         console.log("-----CtermsT:   ", curU.terms.args[0].terms);
         console.log("-----CtermsV1:   ", curU.terms.args[1].vars);*/
-        debug();
     }
 }
 
@@ -195,7 +199,7 @@ function compact(F: tempMultEq[]): void {
         }
         //console.log('F[i].terms', F[i].terms);
         m.terms = MergeMultiTerms(m.terms, F[i].terms);
-        //console.log(m.terms);
+        console.log(m.count, multEqNum);
 
         if (m.count == 0) {
             /*if (m.terms.args.length < 2) {
@@ -220,25 +224,32 @@ function MergeMultEq(m: multEq, m1: multEq): void {
         }
         m.count += m1.count;
         vars2 = m1.vars;
-        vars2.forEach(v => {
+        for (let i = 0; i < vars2.length; i++) {
             //v.terms = m.terms; // или v.M = m; ??
-            v.M = m;
+            vars2[i].M = m;
             //m.vars.forEach(v => {
-            m.vars.push(v);
+            m.vars.push(vars2[i]);
             //});
-        });
-        MergeMultiTerms(m.terms, m1.terms);
+        }
+        /*vars2.forEach(v => {
+            
+        });*/
+        m.terms = MergeMultiTerms(m.terms, m1.terms);
         multEqNum--;
     }
 }
 
 function MergeMultiTerms(m: multiTerm, m1: multiTerm): multiTerm {
+    output(U);
     let arg: tempMultEq[] = [], arg1: tempMultEq[] = [];
-    console.log("MergeMultiTerms:   ", m1);
-    if (m.args.length == 0) return m1;
-    else if (m1.args.length > 0) {
+    console.log("MergeMultiTerms:   ", m, m1);
+    if (!m.constr && m.args.length == 0) {
+        console.log(m1);
+        return m1;
+    }
+    else if (m1.args.length > 0 || m1.constr) {
         if (m.constr! != m1.constr!) {
-            err = 'clash' + m.constr!.name + m1.constr!.name;
+            err = 'clash';//'unification error: конструкторы имеют разные имена' +' '+ m.constr!.name +' ' + m1.constr!.name;
             return m1;
         } else {
             arg = m.args;
@@ -253,6 +264,7 @@ function MergeMultiTerms(m: multiTerm, m1: multiTerm): multiTerm {
             m.args = arg;
         }
     }
+    console.log(m);
     return m;
 }
 
@@ -263,7 +275,6 @@ function buildMultiTerm(M: term[]): multiTerm {
         return { args: list };
     }
     //console.log(M);
-    if (M[0].isVar) log('Аня где то облажалась');
     let constr = M[0].constr;
     if (constr.fieldsNum != 0) {
         let n = M[0].subterms.length;
@@ -271,19 +282,17 @@ function buildMultiTerm(M: term[]): multiTerm {
             let F2: term[] = [];
             let C2: term[] = [];
             M.forEach(elem => {
-                if (elem.isVar) log('Аня где то облажалась');
-                else {
-                    if (elem.constr != constr) {
-                        err = 'unification error: невозможно построить мультитерм конструкторы имеют разные имена';
-                        return;
-                    }
-                    let subterm = elem.subterms[i];
-                    if (subterm.isVar) vars2.push(elem.subterms[i]);
-                    else terms2.push(elem.subterms[i]);
+                if (elem.constr != constr) {
+                    err = 'unification error: невозможно построить мультитерм конструкторы имеют разные имена';
+                    return;
                 }
+                let subterm = elem.subterms[i];
+                if (subterm.isVar) vars2.push(elem.subterms[i]);
+                else terms2.push(elem.subterms[i]);
             }); //еле врубилась что такое мультитерм
 
             let MT = buildMultiTerm(terms2);
+            if (err) return MT;
             list.push({ vars: vars2, terms: MT });
             vars2 = []; terms2 = [];
         }
@@ -312,13 +321,13 @@ function buildU(): void {
     let i = 0;
     let V = Object.values(vars);
     for (let j = 0; j < V.length; j++) {
-        //if (V[j].count != 0 || v.name == 'x0') {
-        let M = buildMultiTerm(V[j].terms);
+        if (V[j].count != 0 || V[j].name == 'x0') {
+            let M = buildMultiTerm(V[j].terms);
 
-        if (err) return;
-        U.push({ vars: [V[j]], terms: M, count: V[j].count });
-        V[j].M = U[i++];
-        //}
+            if (err) return;
+            U.push({ vars: [V[j]], terms: M, count: V[j].count });
+            V[j].M = U[i++];
+        }
 
     }
     multEqNum = i;
@@ -354,7 +363,6 @@ function parseConstructors(str: string): void {
             constructors[res![1]] = { name: res![1], fieldsNum: Number(res![2]) };
     });
     if (err) return;
-    console.log(constructors);
 }
 
 function parseVariables(str: string): void {
@@ -375,7 +383,6 @@ function parseVariables(str: string): void {
         }
         vars[elem] = { name: elem, count: 0, terms: [] };
     });
-    console.log(vars);
 }
 
 function parseTerm(str: string): any {
@@ -437,15 +444,14 @@ function parseTermStr(str: string): any {
     return {};
 }
 
-function output(): void {
-    log('\n_______result_______\n');
+function output(R: multEq[]): void {
     if (err) {
         error(err);
         return;
     }
-    //log(T);
+    //log(R);
     let out = "";
-    T.forEach(ME => {
+    R.forEach(ME => {
         let varss = ME.vars;
         out += '{';
         for (let i = 0; i < varss.length; i++) {

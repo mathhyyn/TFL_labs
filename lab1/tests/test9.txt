@@ -1,0 +1,4 @@
+constructors    = B(1),A(1), f(3)
+variables       = x, y,z,w,v
+First term:     f(A(v),A(v), B(v))
+Second term:   f(x, y, x)
