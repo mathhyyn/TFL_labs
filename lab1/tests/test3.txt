@@ -1,4 +1,4 @@
 constructors    = B(0),A(0), f(2)
 variables       = x, y,z,w,v
-First term:     A
-Second term:    A
+First term:     f(A,B)
+Second term:    f(x, y)
