@@ -28,7 +28,6 @@ class variable {
 }
 
 class multEq {
-    varNumber: number = 0;
     vars: variable[] = [];
     terms: multiTerm;
     count: number = 0;
@@ -172,7 +171,7 @@ function selectMultEq(): any {
 function compact(F: tempMultEq[]): void {
     let vars2: term[] = [], V: term, m: multEq, m1: multEq;
     for (let i = 0; i < F.length; i++) {
-        vars2 = F[i].vars; //variable 
+        vars2 = F[i].vars;
         V = vars2[0];
         m = V.var!.M;
         m.count--;
@@ -200,32 +199,19 @@ function findVar(v: variable, vars2: variable[]): boolean {
 function MergeMultEq(m: multEq, m1: multEq): multEq {
     let vars2: variable[] = [], multt: multEq;
     if (m != m1) {
-        if (m.varNumber < m1.varNumber) {
+        if (m.vars.length < m1.vars.length) {
             multt = m;
             m = m1;
             m1 = multt;
         }
-        let b = false;
+        m.count += m1.count;
         vars2 = m1.vars;
         for (let i = 0; i < vars2.length; i++) {
             vars2[i].M = m;
-            if (!findVar(vars2[i], m.vars)) {
-                b = true;
                 m.vars.push(vars2[i]);
-
-                m.varNumber++;
-            } else {
-                m.count--;
-            }
-        }
-        if (b || vars2.length == 0) {
-
-            m.count += m1.count;
         }
         m.terms = MergeMultiTerms(m.terms, m1.terms);
-        if (b || vars2.length == 0) {
-            multEqNum--;
-        }
+        multEqNum--;
     }
     return m;
 }
@@ -291,7 +277,6 @@ function reduce(M: multiTerm, F: tempMultEq[]): void {
     for (let i = 0; i < M.args.length; i++) {
         let arg = M.args[i];
         if (arg.vars.length == 0) {
-            //let M2 = buildMultiTerm();
             reduce(M.args[i].terms!, F);
         }
         else {
@@ -311,7 +296,7 @@ function buildU(): void {
             let M = buildMultiTerm(V[j].terms);
 
             if (err) return;
-            U.push({ vars: [V[j]], terms: M, count: V[j].count, varNumber: 1 });
+            U.push({ vars: [V[j]], terms: M, count: V[j].count });
             V[j].M = U[i++];
         }
 
