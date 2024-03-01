@@ -128,12 +128,10 @@ function unification(): void {
     if (err) return;
 
     substr = str.match(/Firstterm:(.+)Secondterm/);
-    pos = 0;
     let first = parseTerm(substr[1]);
     if (err) return;
 
     substr = str.match(/Secondterm:(.+)/);
-    pos = 0;
     let second = parseTerm(substr[1]);
     if (err) return;
     vars['x0'].terms = [first, second];
@@ -357,6 +355,7 @@ function parseVariables(str: string): void {
 }
 
 function parseTerm(str: string): any {
+    pos = 0;
     let term = parseTermStr(str);
     if (str.length != pos) {
         err = 'term syntax error';
